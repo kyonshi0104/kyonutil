@@ -1,0 +1,5 @@
+github.com/bwmarrin/discordgo,https://github.com/bwmarrin/discordgo/blob/v0.29.0/LICENSE,BSD-3-Clause
+github.com/gorilla/websocket,https://github.com/gorilla/websocket/blob/v1.4.2/LICENSE,BSD-2-Clause
+github.com/joho/godotenv,https://github.com/joho/godotenv/blob/v1.5.1/LICENCE,MIT
+github.com/lmittmann/tint,https://github.com/lmittmann/tint/blob/v1.2.0/LICENSE,MIT
+golang.org/x/crypto,https://cs.opensource.google/go/x/crypto/+/v0.46.0:LICENSE,BSD-3-Clause

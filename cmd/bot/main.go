@@ -1,27 +1,30 @@
 package main
 
+//go:generate go run ../../tools/gen_licenses.go
+
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 	"github.com/lmittmann/tint"
+
+	"github.com/kyonshi0104/kyonutil/internal/discord"
 )
 
 func initLogger() {
-	handler := tint.NewHandler(os.Stderr, &tint.Options{
-		Level:      slog.LevelDebug,
-		TimeFormat: "15:04:05",
-	})
+	handler := tint.NewTextHandler(os.Stderr, &tint.Options{Level: slog.LevelDebug, TimeFormat: "15:04:05"})
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 }
 func main() {
 	initLogger()
-	loadEnv()
+	LoadEnv()
 	guildID := ""
 
 	if os.Getenv("ENVIRONMENT") == "development" {
@@ -37,9 +40,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	bot.AddHandler(onReady)
-	bot.AddHandler(onMessageCreate)
-	bot.AddHandler(onInteractionCreate)
+	bot.AddHandler(discord.OnReady)
+	bot.AddHandler(discord.OnMessageCreate)
+	bot.AddHandler(discord.OnInteractionCreate)
 	if err := bot.Open(); err != nil {
 		slog.Error("Error opening Discord bot:", "error", err)
 		os.Exit(1)
@@ -48,11 +51,15 @@ func main() {
 	defer bot.Close()
 	slog.Info("Bot is now running. Press Ctrl+C to exit.")
 
-	_, err = bot.ApplicationCommandBulkOverwrite(bot.State.User.ID, guildID, commands)
+	go startPingStatusUpdater(bot)
+
+	_, err = bot.ApplicationCommandBulkOverwrite(bot.State.User.ID, guildID, discord.Commands)
 
 	if err != nil {
 		slog.Error("Error overwriting application commands:", "error", err)
 		os.Exit(1)
+	} else {
+		slog.Info("Application commands registered successfully.")
 	}
 
 	// Wait for a signal to quit
@@ -61,7 +68,22 @@ func main() {
 	<-signalChan
 }
 
-func loadEnv() {
+func startPingStatusUpdater(s *discordgo.Session) {
+	ticker := time.NewTicker(1 * time.Minute)
+
+	for {
+		<-ticker.C
+		ping := s.HeartbeatLatency().Milliseconds()
+		statusText := fmt.Sprintf("Ping: %dms", ping)
+
+		err := s.UpdateCustomStatus(statusText)
+		if err != nil {
+			slog.Warn("Failed to update status", "error", err)
+		}
+	}
+}
+
+func LoadEnv() {
 	if err := godotenv.Load(); err != nil {
 		slog.Warn("Warning: .env file not found. Relying on system environment variables")
 	}
